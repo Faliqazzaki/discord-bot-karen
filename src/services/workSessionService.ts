@@ -15,6 +15,7 @@ export class WorkSessionError extends Error {
 
 function toSummary(session: WorkSession): WorkSessionSummary {
   return {
+    id: session.id,
     userId: session.userId,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
@@ -38,6 +39,15 @@ class WorkSessionService {
     const session = workSessionRepository.create(userId, guildId);
     return toSummary(session);
   }
+
+    /**
+   * Batalkan session yang baru dibuat (rollback), dipakai kalau grant
+   * role Discord gagal setelah session berhasil dibuat.
+   */
+  cancelSession(sessionId: string): void {
+    workSessionRepository.remove(sessionId);
+  }
+  
 
   /**
    * Akhiri work session aktif milik user.

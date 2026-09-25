@@ -13,6 +13,7 @@ export interface WorkSession {
 // Bentuk data ringkas yang dikembalikan ke user, dipisah dari entity internal
 // supaya command layer tidak bergantung langsung pada struktur repository.
 export interface WorkSessionSummary {
+  id: string;
   userId: string;
   startedAt: Date;
   endedAt: Date | null;

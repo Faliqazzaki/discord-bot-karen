@@ -11,7 +11,6 @@ export const data = new SlashCommandBuilder()
   .setDescription("Mulai work session dan dapatkan akses Focus Room");
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  // Command ini hanya masuk akal dipakai di dalam server, bukan DM.
   if (!interaction.guild || !interaction.member) {
     await interaction.reply({
       content: "Command ini hanya bisa dipakai di dalam server, bukan DM.",
@@ -22,34 +21,46 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const member = interaction.member as GuildMember;
 
+  await interaction.deferReply();
+
+  // 1. Validasi + buat session dulu (murni in-memory, cepat).
+  let session;
   try {
-    // 1. Validasi + buat session (business logic ada di service, bukan di sini)
-    const session = workSessionService.startSession(
-      member.id,
-      interaction.guild.id
-    );
-
-    // 2. Kalau session berhasil dibuat, baru grant akses Focus Room.
-    //    Urutan ini penting: jangan grant akses kalau session gagal dibuat.
-    await permissionService.grantFocusRoomAccess(member);
-
-    await interaction.reply({
-      content:
-        `✅ Work session dimulai pada <t:${Math.floor(
-          session.startedAt.getTime() / 1000
-        )}:T>.\n` + `Kamu sekarang punya akses ke Focus Room. Selamat bekerja!`,
-      ephemeral: false,
-    });
+    session = workSessionService.startSession(member.id, interaction.guild.id);
   } catch (error) {
-    if (error instanceof WorkSessionError || error instanceof PermissionError) {
-      await interaction.reply({ content: `⚠️ ${error.message}`, ephemeral: true });
+    if (error instanceof WorkSessionError) {
+      await interaction.editReply({ content: `⚠️ ${error.message}` });
       return;
     }
-    // Error tak terduga: jangan bocorkan detail internal ke user
-    console.error("[startwork] Unexpected error:", error);
-    await interaction.reply({
+    console.error("[startwork] Unexpected error saat membuat session:", error);
+    await interaction.editReply({
       content: "❌ Terjadi kesalahan tak terduga. Coba lagi atau hubungi admin.",
-      ephemeral: true,
     });
+    return;
   }
+
+  // 2. Baru grant akses Focus Room. Kalau ini gagal, ROLLBACK session yang
+  //    barusan dibuat.
+  try {
+    await permissionService.grantFocusRoomAccess(member);
+  } catch (error) {
+    workSessionService.cancelSession(session.id);
+
+    if (error instanceof PermissionError) {
+      await interaction.editReply({ content: `⚠️ ${error.message}` });
+      return;
+    }
+    console.error("[startwork] Unexpected error saat grant role:", error);
+    await interaction.editReply({
+      content: "❌ Terjadi kesalahan tak terduga. Coba lagi atau hubungi admin.",
+    });
+    return;
+  }
+
+  await interaction.editReply({
+    content:
+      `✅ Work session dimulai pada <t:${Math.floor(
+        session.startedAt.getTime() / 1000
+      )}:T>.\n` + `Kamu sekarang punya akses ke Focus Room. Selamat bekerja!`,
+  });
 }

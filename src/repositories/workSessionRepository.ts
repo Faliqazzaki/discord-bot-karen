@@ -49,6 +49,15 @@ class WorkSessionRepository {
     return session;
   }
 
+  /**
+   * Hapus session sepenuhnya dari memory. Dipakai untuk rollback --
+   * saat session berhasil dibuat tapi langkah berikutnya (grant role)
+   * gagal, jadi session "setengah jadi" ini tidak boleh dianggap valid.
+   */
+  remove(sessionId: string): void {
+    this.sessions.delete(sessionId);
+  }
+
   /** Tutup session: set endedAt, durationMs, dan status jadi "ended". */
   close(sessionId: string): WorkSession {
     const session = this.sessions.get(sessionId);

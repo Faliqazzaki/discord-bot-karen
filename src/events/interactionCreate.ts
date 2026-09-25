@@ -5,6 +5,8 @@ export function registerInteractionCreateEvent(client: Client) {
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
+    if (interaction.user.bot) return;
+
     const command = client.commands.get(interaction.commandName);
     if (!command) {
       console.warn(`[interactionCreate] Command tidak dikenal: ${interaction.commandName}`);
