@@ -17,21 +17,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const activeSessions = workSessionService.getActiveSessions(interaction.guild.id);
+  await interaction.deferReply();
+
+  let activeSessions;
+  try {
+    activeSessions = await workSessionService.getActiveSessions(interaction.guild.id);
+  } catch (error) {
+    console.error("[status] Unexpected error saat ambil data session:", error);
+    await interaction.editReply({ content: "❌ Terjadi kesalahan tak terduga. Coba lagi atau hubungi admin." });
+    return;
+  }
 
   if (activeSessions.length === 0) {
-    await interaction.reply({
-      content: "Tidak ada work session yang aktif saat ini.",
-      ephemeral: true,
-    });
+    await interaction.editReply({ content: "Tidak ada work session yang aktif saat ini." });
     return;
   }
 
   const now = Date.now();
-  const sorted = [...activeSessions].sort(
-    (a, b) => a.startedAt.getTime() - b.startedAt.getTime()
-  );
-
+  const sorted = [...activeSessions].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
   const shown = sorted.slice(0, MAX_LISTED_SESSIONS);
   const remaining = sorted.length - shown.length;
 
@@ -40,12 +43,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return `• <@${s.userId}> — sedang bekerja selama **${elapsed}**`;
   });
 
-  if (remaining > 0) {
-    lines.push(`_...dan ${remaining} lainnya._`);
-  }
+  if (remaining > 0) lines.push(`_...dan ${remaining} lainnya._`);
 
-  await interaction.reply({
+  await interaction.editReply({
     content: `**Work session aktif (${activeSessions.length}):**\n${lines.join("\n")}`,
-    ephemeral: false,
   });
 }

@@ -1,80 +1,101 @@
-import { randomUUID } from "crypto";
-import { WorkSession } from "../types/session";
+import { supabase } from "../config/supabaseClient";
+import { userRepository } from "./userRepository";
+import { serverRepository } from "./serverRepository";
+import { WorkSession, WorkSessionStatus } from "../types/session";
 
-/**
- * Repository ini menyimpan work session di memory (Map), BUKAN database.
- * Sengaja dibuat dengan interface method yang mirip repository berbasis DB
- * (findActiveByUser, create, update, dst) supaya nanti di Phase 2 kita
- * tinggal ganti isi implementasinya ke Supabase tanpa mengubah
- * workSessionService.ts sama sekali.
- *
- * PENTING: karena in-memory, semua data HILANG saat bot restart.
- * Ini expected behavior untuk Phase 1.
- */
+interface WorkSessionRow {
+  id: string;
+  user_id: string;
+  server_id: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number | null;
+  status: WorkSessionStatus;
+}
+
+function mapRow(row: WorkSessionRow): WorkSession {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    guildId: row.server_id,
+    startedAt: new Date(row.started_at),
+    endedAt: row.ended_at ? new Date(row.ended_at) : null,
+    durationMs: row.duration_ms,
+    status: row.status,
+  };
+}
+
 class WorkSessionRepository {
-  private sessions = new Map<string, WorkSession>();
+  async findActiveByUser(discordUserId: string, discordGuildId: string): Promise<WorkSession | undefined> {
+    const user = await userRepository.upsert(discordUserId);
+    const server = await serverRepository.upsert(discordGuildId);
 
-  /** Cari session yang sedang aktif milik user tertentu di guild tertentu. */
-  findActiveByUser(userId: string, guildId: string): WorkSession | undefined {
-    for (const session of this.sessions.values()) {
-      if (
-        session.userId === userId &&
-        session.guildId === guildId &&
-        session.status === "active"
-      ) {
-        return session;
-      }
-    }
-    return undefined;
+    const { data, error } = await supabase
+      .from("work_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("server_id", server.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (error) throw new Error(`Gagal cek session aktif: ${error.message}`);
+    return data ? mapRow(data as WorkSessionRow) : undefined;
   }
 
-  /** Ambil semua session yang statusnya masih aktif di suatu guild. */
-  findAllActive(guildId: string): WorkSession[] {
-    return Array.from(this.sessions.values()).filter(
-      (s) => s.guildId === guildId && s.status === "active"
-    );
+  async findAllActive(discordGuildId: string): Promise<WorkSession[]> {
+    const server = await serverRepository.upsert(discordGuildId);
+
+    const { data, error } = await supabase
+      .from("work_sessions")
+      .select("*")
+      .eq("server_id", server.id)
+      .eq("status", "active");
+
+    if (error) throw new Error(`Gagal ambil daftar session aktif: ${error.message}`);
+    return (data ?? []).map((row) => mapRow(row as WorkSessionRow));
   }
 
-  create(userId: string, guildId: string): WorkSession {
-    const session: WorkSession = {
-      id: randomUUID(),
-      userId,
-      guildId,
-      startedAt: new Date(),
-      endedAt: null,
-      durationMs: null,
-      status: "active",
-    };
-    this.sessions.set(session.id, session);
-    return session;
+  async create(discordUserId: string, discordGuildId: string, username?: string): Promise<WorkSession> {
+    const user = await userRepository.upsert(discordUserId, username);
+    const server = await serverRepository.upsert(discordGuildId);
+
+    const { data, error } = await supabase
+      .from("work_sessions")
+      .insert({ user_id: user.id, server_id: server.id, status: "active" })
+      .select("*")
+      .single();
+
+    if (error || !data) throw new Error(`Gagal membuat session baru: ${error?.message}`);
+    return mapRow(data as WorkSessionRow);
   }
 
-  /**
-   * Hapus session sepenuhnya dari memory. Dipakai untuk rollback --
-   * saat session berhasil dibuat tapi langkah berikutnya (grant role)
-   * gagal, jadi session "setengah jadi" ini tidak boleh dianggap valid.
-   */
-  remove(sessionId: string): void {
-    this.sessions.delete(sessionId);
-  }
+  async close(sessionId: string): Promise<WorkSession> {
+    const { data: existing, error: fetchError } = await supabase
+      .from("work_sessions")
+      .select("*")
+      .eq("id", sessionId)
+      .single();
 
-  /** Tutup session: set endedAt, durationMs, dan status jadi "ended". */
-  close(sessionId: string): WorkSession {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session dengan id ${sessionId} tidak ditemukan.`);
-    }
+    if (fetchError || !existing) throw new Error(`Session dengan id ${sessionId} tidak ditemukan.`);
+
     const endedAt = new Date();
-    const updated: WorkSession = {
-      ...session,
-      endedAt,
-      durationMs: endedAt.getTime() - session.startedAt.getTime(),
-      status: "ended",
-    };
-    this.sessions.set(sessionId, updated);
-    return updated;
+    const durationMs = endedAt.getTime() - new Date(existing.started_at).getTime();
+
+    const { data, error } = await supabase
+      .from("work_sessions")
+      .update({ ended_at: endedAt.toISOString(), duration_ms: durationMs, status: "ended" })
+      .eq("id", sessionId)
+      .select("*")
+      .single();
+
+    if (error || !data) throw new Error(`Gagal menutup session ${sessionId}: ${error?.message}`);
+    return mapRow(data as WorkSessionRow);
+  }
+
+  async remove(sessionId: string): Promise<void> {
+    const { error } = await supabase.from("work_sessions").delete().eq("id", sessionId);
+    if (error) throw new Error(`Gagal menghapus session ${sessionId}: ${error.message}`);
   }
 }
 
-// Singleton: satu instance dipakai di seluruh aplikasi selama proses berjalan.
 export const workSessionRepository = new WorkSessionRepository();

@@ -26,7 +26,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // 1. Validasi + buat session dulu (murni in-memory, cepat).
   let session;
   try {
-    session = workSessionService.startSession(member.id, interaction.guild.id);
+    session = await workSessionService.startSession(member.id, interaction.guild.id, member.user.tag);
   } catch (error) {
     if (error instanceof WorkSessionError) {
       await interaction.editReply({ content: `⚠️ ${error.message}` });
@@ -44,7 +44,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   try {
     await permissionService.grantFocusRoomAccess(member);
   } catch (error) {
-    workSessionService.cancelSession(session.id);
+        try {
+          await workSessionService.cancelSession(session.id);
+       } catch (rollbackError) {
+        console.error("[startwork] Gagal rollback session:", rollbackError);
+    }
 
     if (error instanceof PermissionError) {
       await interaction.editReply({ content: `⚠️ ${error.message}` });
@@ -61,6 +65,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     content:
       `✅ Work session dimulai pada <t:${Math.floor(
         session.startedAt.getTime() / 1000
-      )}:T>.\n` + `Kamu sekarang punya akses ke Focus Room. Selamat bekerja!`,
+      )}:T>.\n` + `Kamu sekarang punya akses ke Working Voice. Selamat bekerja!`,
   });
 }

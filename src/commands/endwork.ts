@@ -28,7 +28,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   //    jadi TIDAK di-rollback walau langkah 2 (revoke role) gagal.
   let session;
   try {
-    session = workSessionService.endSession(member.id, interaction.guild.id);
+    session = await workSessionService.endSession(member.id, interaction.guild.id);
   } catch (error) {
     if (error instanceof WorkSessionError) {
       await interaction.editReply({ content: `⚠️ ${error.message}` });

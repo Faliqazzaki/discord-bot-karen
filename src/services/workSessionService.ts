@@ -1,11 +1,6 @@
 import { workSessionRepository } from "../repositories/workSessionRepository";
 import { WorkSession, WorkSessionSummary } from "../types/session";
 
-/**
- * Custom error class supaya command layer bisa membedakan
- * "error karena business rule dilanggar" vs "error teknis tak terduga",
- * dan menampilkan pesan yang sesuai ke user.
- */
 export class WorkSessionError extends Error {
   constructor(message: string) {
     super(message);
@@ -25,53 +20,38 @@ function toSummary(session: WorkSession): WorkSessionSummary {
 }
 
 class WorkSessionService {
-  /**
-   * Mulai work session baru untuk user.
-   * Gagal jika user sudah punya session aktif (mencegah double /startwork).
-   */
-  startSession(userId: string, guildId: string): WorkSessionSummary {
-    const existing = workSessionRepository.findActiveByUser(userId, guildId);
+  async startSession(userId: string, guildId: string, username?: string): Promise<WorkSessionSummary> {
+    const existing = await workSessionRepository.findActiveByUser(userId, guildId);
     if (existing) {
       throw new WorkSessionError(
         "Kamu sudah punya work session yang sedang aktif. Gunakan `/endwork` dulu sebelum memulai yang baru."
       );
     }
-    const session = workSessionRepository.create(userId, guildId);
+    const session = await workSessionRepository.create(userId, guildId, username);
     return toSummary(session);
   }
 
-    /**
-   * Batalkan session yang baru dibuat (rollback), dipakai kalau grant
-   * role Discord gagal setelah session berhasil dibuat.
-   */
-  cancelSession(sessionId: string): void {
-    workSessionRepository.remove(sessionId);
+  async cancelSession(sessionId: string): Promise<void> {
+    await workSessionRepository.remove(sessionId);
   }
-  
 
-  /**
-   * Akhiri work session aktif milik user.
-   * Gagal jika user tidak punya session aktif.
-   */
-  endSession(userId: string, guildId: string): WorkSessionSummary {
-    const existing = workSessionRepository.findActiveByUser(userId, guildId);
+  async endSession(userId: string, guildId: string): Promise<WorkSessionSummary> {
+    const existing = await workSessionRepository.findActiveByUser(userId, guildId);
     if (!existing) {
-      throw new WorkSessionError(
-        "Kamu tidak punya work session yang aktif. Mulai dulu dengan `/startwork`."
-      );
+      throw new WorkSessionError("Kamu tidak punya work session yang aktif. Mulai dulu dengan `/startwork`.");
     }
-    const closed = workSessionRepository.close(existing.id);
+    const closed = await workSessionRepository.close(existing.id);
     return toSummary(closed);
   }
 
-  /** Ambil daftar semua session yang sedang aktif di suatu guild. */
-  getActiveSessions(guildId: string): WorkSessionSummary[] {
-    return workSessionRepository.findAllActive(guildId).map(toSummary);
+  async getActiveSessions(guildId: string): Promise<WorkSessionSummary[]> {
+    const sessions = await workSessionRepository.findAllActive(guildId);
+    return sessions.map(toSummary);
   }
 
-  /** Cek apakah user tertentu sedang punya session aktif. */
-  hasActiveSession(userId: string, guildId: string): boolean {
-    return workSessionRepository.findActiveByUser(userId, guildId) !== undefined;
+  async hasActiveSession(userId: string, guildId: string): Promise<boolean> {
+    const existing = await workSessionRepository.findActiveByUser(userId, guildId);
+    return existing !== undefined;
   }
 }
 
