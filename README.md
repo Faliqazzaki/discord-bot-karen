@@ -103,4 +103,5 @@ src/
     └── duration.ts
 ```
 
+
 Alur data: **Command → Service → Repository**. Command tidak pernah bicara langsung ke repository, dan service tidak pernah tahu detail Discord.js — supaya nanti gampang di-test dan gampang migrasi ke Phase 2 (Supabase).
