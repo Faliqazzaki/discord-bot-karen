@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { registerReadyEvent } from "./events/ready";
 import { registerInteractionCreateEvent } from "./events/interactionCreate";
 import { Command } from "./types/command";
+import { createWebhookServer } from "./server";
 
 // Import semua command secara eksplisit.
 // Untuk Phase 1 dengan 3 command, import manual ini cukup jelas dan mudah dilacak.
@@ -32,4 +33,10 @@ client.login(env.discordToken).catch((error) => {
   console.error("❌ Gagal login ke Discord. Cek DISCORD_TOKEN di .env.");
   console.error(error);
   process.exit(1);
+});
+
+const webhookApp = createWebhookServer();
+webhookApp.listen(env.webhookServerPort, () => {
+  console.log(`✅ Webhook server listening di port ${env.webhookServerPort}`);
+  console.log(`   Endpoint: http://localhost:${env.webhookServerPort}/webhooks/github`);
 });
