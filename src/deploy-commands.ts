@@ -4,6 +4,10 @@ import { env } from "./config/env";
 import * as startwork from "./commands/startwork";
 import * as endwork from "./commands/endwork";
 import * as status from "./commands/status";
+import * as dailyreport from "./commands/dailyreport";
+import * as weeklyreport from "./commands/weeklyreport";
+import * as mystats from "./commands/mystats";
+import * as teamstats from "./commands/teamstats";
 
 /**
  * Script terpisah dari bot utama. Jalankan manual setiap kali kamu
@@ -15,7 +19,9 @@ import * as status from "./commands/status";
  * command langsung muncul (global command butuh waktu ~1 jam untuk propagate).
  */
 
-const commands = [startwork, endwork, status].map((mod) => mod.data.toJSON());
+const commands = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats].map((mod) =>
+  mod.data.toJSON()
+);
 
 const rest = new REST().setToken(env.discordToken);
 

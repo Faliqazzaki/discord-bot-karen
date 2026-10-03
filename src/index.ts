@@ -11,6 +11,11 @@ import { createWebhookServer } from "./server";
 import * as startwork from "./commands/startwork";
 import * as endwork from "./commands/endwork";
 import * as status from "./commands/status";
+import * as dailyreport from "./commands/dailyreport";
+import * as weeklyreport from "./commands/weeklyreport";
+import * as mystats from "./commands/mystats";
+import * as teamstats from "./commands/teamstats";
+
 
 const client = new Client({
   intents: [
@@ -21,7 +26,7 @@ const client = new Client({
 
 // Daftarkan semua command ke Map, supaya interactionCreate bisa mencarinya dengan cepat.
 client.commands = new Map<string, Command>();
-const commandModules = [startwork, endwork, status];
+const commandModules = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats];
 for (const mod of commandModules) {
   client.commands.set(mod.data.name, mod as Command);
 }
