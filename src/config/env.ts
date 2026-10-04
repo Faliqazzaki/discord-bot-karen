@@ -18,9 +18,19 @@ export const env = {
   discordClientId: requireEnv("DISCORD_CLIENT_ID"),
   discordGuildId: requireEnv("DISCORD_GUILD_ID"),
   focusRoomRoleId: requireEnv("FOCUS_ROOM_ROLE_ID"),
+  
+  // SUPABASE CONFIGURATION
   supabaseUrl: requireEnv("SUPABASE_URL"),
   supabaseServiceKey: requireEnv("SUPABASE_SERVICE_KEY"),
+
+  // GITHUB CONFIGURATION
   githubWebhookSecret: requireEnv("GITHUB_WEBHOOK_SECRET"),
   githubToken: process.env.GITHUB_TOKEN?.trim() || undefined,
   webhookServerPort: optionalEnv("WEBHOOK_SERVER_PORT", "3000"),
+
+  // AI INTEGRATION
+  aiProvider: optionalEnv("AI_PROVIDER", "gemini"),
+  geminiApiKey: process.env.GEMINI_API_KEY?.trim() || undefined,
+  geminiModel: optionalEnv("GEMINI_MODEL", "emini-3.5-flash-lite"),
+
 };
