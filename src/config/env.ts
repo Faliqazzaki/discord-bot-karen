@@ -31,6 +31,6 @@ export const env = {
   // AI INTEGRATION
   aiProvider: optionalEnv("AI_PROVIDER", "gemini"),
   geminiApiKey: process.env.GEMINI_API_KEY?.trim() || undefined,
-  geminiModel: optionalEnv("GEMINI_MODEL", "emini-3.5-flash-lite"),
+  geminiModel: optionalEnv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
 
 };
