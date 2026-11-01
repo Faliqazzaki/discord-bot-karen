@@ -8,6 +8,8 @@ Phase 1: core Discord bot + work session management (in-memory, belum pakai data
 - `/startwork` — mulai work session, dapat akses role Focus Room
 - `/endwork` — akhiri work session, akses Focus Room dicabut, durasi ditampilkan
 - `/status` — lihat siapa saja yang sedang aktif bekerja
+- `/help` — tampilkan daftar command beserta fungsinya
+- **Auto-endwork** — session yang lupa di-`/endwork` otomatis ditutup setelah melewati batas durasi (default 8 jam), akses Focus Room dicabut, dan user dikabari lewat DM
 
 ## Prasyarat
 
@@ -40,6 +42,8 @@ Lalu isi nilainya:
 | `DISCORD_CLIENT_ID` | Developer Portal → Application kamu → General Information → Application ID |
 | `DISCORD_GUILD_ID` | Discord app → aktifkan Developer Mode (Settings → Advanced) → klik kanan nama server → Copy Server ID |
 | `FOCUS_ROOM_ROLE_ID` | Discord app → klik kanan role `Focus Room Access` → Copy Role ID |
+| `AUTO_ENDWORK_MAX_HOURS` | Opsional, default `8`. Batas durasi session sebelum ditutup otomatis |
+| `AUTO_ENDWORK_CHECK_INTERVAL_MINUTES` | Opsional, default `10`. Interval pengecekan session kedaluwarsa |
 
 **Jangan pernah commit file `.env` ke git** — file ini sudah masuk `.gitignore`.
 
@@ -85,7 +89,8 @@ src/
 ├── commands/                   # 1 file = 1 slash command
 │   ├── startwork.ts
 │   ├── endwork.ts
-│   └── status.ts
+│   ├── status.ts
+│   └── help.ts
 ├── events/                     # Discord event handlers
 │   ├── ready.ts
 │   └── interactionCreate.ts

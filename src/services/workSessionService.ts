@@ -12,6 +12,7 @@ function toSummary(session: WorkSession): WorkSessionSummary {
   return {
     id: session.id,
     userId: session.userId,
+    guildId: session.guildId,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     durationMs: session.durationMs,
@@ -47,6 +48,21 @@ class WorkSessionService {
   async getActiveSessions(guildId: string): Promise<WorkSessionSummary[]> {
     const sessions = await workSessionRepository.findAllActive(guildId);
     return sessions.map(toSummary);
+  }
+
+  /** Session aktif yang durasinya sudah melewati batas (dipakai auto-endwork). */
+  async getStaleActiveSessions(maxDurationMs: number): Promise<WorkSessionSummary[]> {
+    const sessions = await workSessionRepository.findStaleActive(maxDurationMs);
+    return sessions.map(toSummary);
+  }
+
+  /**
+   * Tutup session berdasarkan id. Kalau ternyata sudah ditutup lebih dulu,
+   * hasilnya `null` (bukan error) supaya job bisa lanjut ke session berikutnya.
+   */
+  async closeSessionIfActive(sessionId: string): Promise<WorkSessionSummary | null> {
+    const closed = await workSessionRepository.closeIfActive(sessionId);
+    return closed ? toSummary(closed) : null;
   }
 
   async hasActiveSession(userId: string, guildId: string): Promise<boolean> {

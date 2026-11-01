@@ -8,6 +8,7 @@ import * as dailyreport from "./commands/dailyreport";
 import * as weeklyreport from "./commands/weeklyreport";
 import * as mystats from "./commands/mystats";
 import * as teamstats from "./commands/teamstats";
+import * as help from "./commands/help";
 
 /**
  * Script terpisah dari bot utama. Jalankan manual setiap kali kamu
@@ -19,7 +20,7 @@ import * as teamstats from "./commands/teamstats";
  * command langsung muncul (global command butuh waktu ~1 jam untuk propagate).
  */
 
-const commands = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats].map((mod) =>
+const commands = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats, help].map((mod) =>
   mod.data.toJSON()
 );
 

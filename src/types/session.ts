@@ -15,6 +15,7 @@ export interface WorkSession {
 export interface WorkSessionSummary {
   id: string;
   userId: string;
+  guildId: string;
   startedAt: Date;
   endedAt: Date | null;
   durationMs: number | null;

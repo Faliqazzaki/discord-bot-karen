@@ -13,6 +13,17 @@ function optionalEnv(name: string, defaultValue: string): string {
   return value && value.trim() !== "" ? value : defaultValue;
 }
 
+function optionalPositiveNumber(name: string, defaultValue: number): number {
+  const value = process.env[name];
+  if (!value || value.trim() === "") return defaultValue;
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`[env] Environment variable "${name}" harus berupa angka > 0. Cek file .env kamu.`);
+  }
+  return parsed;
+}
+
 export const env = {
   discordToken: requireEnv("DISCORD_TOKEN"),
   discordClientId: requireEnv("DISCORD_CLIENT_ID"),
@@ -33,4 +44,9 @@ export const env = {
   geminiApiKey: process.env.GEMINI_API_KEY?.trim() || undefined,
   geminiModel: optionalEnv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
 
+  // AUTO ENDWORK
+  // Session yang aktif lebih lama dari batas ini akan ditutup otomatis
+  // supaya data tidak membengkak saat user lupa /endwork.
+  autoEndworkMaxHours: optionalPositiveNumber("AUTO_ENDWORK_MAX_HOURS", 8),
+  autoEndworkCheckIntervalMinutes: optionalPositiveNumber("AUTO_ENDWORK_CHECK_INTERVAL_MINUTES", 10),
 };

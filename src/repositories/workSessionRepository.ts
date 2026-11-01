@@ -56,6 +56,23 @@ class WorkSessionRepository {
     return (data ?? []).map((row) => mapRow(row as WorkSessionRow));
   }
 
+  /**
+   * Ambil semua session aktif yang sudah berjalan lebih lama dari `maxDurationMs`.
+   * Dipakai oleh auto-endwork job. Query lintas server karena job berjalan global.
+   */
+  async findStaleActive(maxDurationMs: number): Promise<WorkSession[]> {
+    const cutoff = new Date(Date.now() - maxDurationMs).toISOString();
+
+    const { data, error } = await supabase
+      .from("work_sessions")
+      .select("*, users(discord_user_id)")
+      .eq("status", "active")
+      .lt("started_at", cutoff);
+
+    if (error) throw new Error(`Gagal ambil session yang kedaluwarsa: ${error.message}`);
+    return (data ?? []).map((row) => mapRow(row as WorkSessionRow));
+  }
+
   async create(discordUserId: string, discordGuildId: string, username?: string): Promise<WorkSession> {
     const user = await userRepository.upsert(discordUserId, username);
     const server = await serverRepository.upsert(discordGuildId);
@@ -91,6 +108,37 @@ class WorkSessionRepository {
 
     if (error || !data) throw new Error(`Gagal menutup session ${sessionId}: ${error?.message}`);
     return mapRow(data as WorkSessionRow);
+  }
+
+  /**
+   * Tutup session HANYA kalau statusnya masih "active".
+   * Mengembalikan `null` kalau session sudah ditutup lebih dulu (misalnya user
+   * menekan /endwork tepat saat job auto-endwork berjalan).
+   */
+  async closeIfActive(sessionId: string): Promise<WorkSession | null> {
+    const { data: existing, error: fetchError } = await supabase
+      .from("work_sessions")
+      .select("*, users(discord_user_id)")
+      .eq("id", sessionId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (fetchError) throw new Error(`Gagal cek session ${sessionId}: ${fetchError.message}`);
+    if (!existing) return null;
+
+    const endedAt = new Date();
+    const durationMs = endedAt.getTime() - new Date(existing.started_at).getTime();
+
+    const { data, error } = await supabase
+      .from("work_sessions")
+      .update({ ended_at: endedAt.toISOString(), duration_ms: durationMs, status: "ended" })
+      .eq("id", sessionId)
+      .eq("status", "active")
+      .select("*, users(discord_user_id)")
+      .maybeSingle();
+
+    if (error) throw new Error(`Gagal menutup session ${sessionId}: ${error.message}`);
+    return data ? mapRow(data as WorkSessionRow) : null;
   }
 
   async remove(sessionId: string): Promise<void> {

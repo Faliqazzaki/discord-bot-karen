@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { env } from "./config/env";
 import { registerReadyEvent } from "./events/ready";
 import { registerInteractionCreateEvent } from "./events/interactionCreate";
+import { startAutoEndworkJob } from "./jobs/autoEndworkJob";
 import { Command } from "./types/command";
 import { createWebhookServer } from "./server";
 
@@ -15,6 +16,7 @@ import * as dailyreport from "./commands/dailyreport";
 import * as weeklyreport from "./commands/weeklyreport";
 import * as mystats from "./commands/mystats";
 import * as teamstats from "./commands/teamstats";
+import * as help from "./commands/help";
 
 
 const client = new Client({
@@ -26,13 +28,14 @@ const client = new Client({
 
 // Daftarkan semua command ke Map, supaya interactionCreate bisa mencarinya dengan cepat.
 client.commands = new Map<string, Command>();
-const commandModules = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats];
+const commandModules = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats, help];
 for (const mod of commandModules) {
   client.commands.set(mod.data.name, mod as Command);
 }
 
 registerReadyEvent(client);
 registerInteractionCreateEvent(client);
+startAutoEndworkJob(client);
 
 client.login(env.discordToken).catch((error) => {
   console.error("❌ Gagal login ke Discord. Cek DISCORD_TOKEN di .env.");
