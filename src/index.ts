@@ -17,6 +17,8 @@ import * as weeklyreport from "./commands/weeklyreport";
 import * as mystats from "./commands/mystats";
 import * as teamstats from "./commands/teamstats";
 import * as help from "./commands/help";
+import * as health from "./commands/health";
+import * as about from "./commands/about";
 
 
 const client = new Client({
@@ -28,7 +30,7 @@ const client = new Client({
 
 // Daftarkan semua command ke Map, supaya interactionCreate bisa mencarinya dengan cepat.
 client.commands = new Map<string, Command>();
-const commandModules = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats, help];
+const commandModules = [startwork, endwork, status, dailyreport, weeklyreport, mystats, teamstats, help, health, about];
 for (const mod of commandModules) {
   client.commands.set(mod.data.name, mod as Command);
 }

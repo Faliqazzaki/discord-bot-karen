@@ -11,6 +11,13 @@ export class AIServiceError extends Error {
   }
 }
 
+export interface AIStatus {
+  configured: boolean;
+  provider: string;
+  model: string | null;
+  message: string;
+}
+
 const GUARDRAIL_INSTRUCTION = `
 ATURAN PENTING yang harus kamu ikuti:
 - Kamu HANYA boleh meringkas/menginterpretasi data yang diberikan, bukan membuat kesimpulan baru di luar data.
@@ -70,6 +77,29 @@ ${githubLines}
 Total commit: ${summary.totalCommits}
 Total pull request: ${summary.totalPullRequests}
 `.trim();
+  }
+
+  /**
+   * Status konfigurasi provider AI. Tidak memanggil API eksternal --
+   * hanya memastikan provider + credential sudah siap dipakai.
+   */
+  getStatus(): AIStatus {
+    try {
+      const provider = this.getProvider();
+      return {
+        configured: true,
+        provider: provider.name,
+        model: provider.name === "gemini" ? env.geminiModel : null,
+        message: "Siap dipakai",
+      };
+    } catch (error) {
+      return {
+        configured: false,
+        provider: env.aiProvider,
+        model: null,
+        message: error instanceof AIServiceError ? error.message : "Konfigurasi AI tidak valid.",
+      };
+    }
   }
 
   async summarizeReport(summary: ReportSummary, kind: "harian" | "mingguan"): Promise<string> {

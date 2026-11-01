@@ -35,8 +35,12 @@ const COMMAND_GROUPS = [
       "dan akses Focus Room dicabut, supaya data tidak menumpuk kalau lupa `/endwork`.",
   },
   {
-    name: "❓ Bantuan",
-    value: "`/help` — Tampilkan pesan bantuan ini.",
+    name: "❓ Bantuan & Debug",
+    value: [
+      "`/help` — Tampilkan pesan bantuan ini.",
+      "`/health` — Cek latensi Discord, koneksi Supabase, dan konfigurasi AI.",
+      "`/about` — Info versi bot, uptime, dan link repository.",
+    ].join("\n"),
   },
 ];
 

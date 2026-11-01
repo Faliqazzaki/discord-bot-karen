@@ -27,6 +27,8 @@ Discord bot untuk workspace produktivitas tim saat mengerjakan TA. Bot ini menge
 ### Lainnya
 
 - `/help` — tampilkan daftar command beserta fungsinya.
+- `/health` — cek latensi Discord, koneksi Supabase, dan konfigurasi AI provider. Berguna untuk debugging tanpa membuka terminal.
+- `/about` — info versi bot, uptime, dan link repository.
 
 ## Prasyarat
 
@@ -158,7 +160,9 @@ src/
 │   ├── weeklyreport.ts
 │   ├── mystats.ts
 │   ├── teamstats.ts
-│   └── help.ts
+│   ├── help.ts
+│   ├── health.ts
+│   └── about.ts
 ├── events/                     # Discord event handlers
 │   ├── ready.ts
 │   └── interactionCreate.ts
@@ -170,6 +174,7 @@ src/
 │   ├── reportService.ts
 │   ├── githubService.ts
 │   ├── aiService.ts
+│   ├── healthService.ts
 │   └── ai/
 │       ├── AIProvider.ts
 │       └── GeminiProvider.ts
