@@ -30,6 +30,21 @@ Discord bot untuk workspace produktivitas tim saat mengerjakan TA. Bot ini menge
 - `/health` — cek latensi Discord, koneksi Supabase, dan konfigurasi AI provider. Berguna untuk debugging tanpa membuka terminal.
 - `/about` — info versi bot, uptime, dan link repository.
 
+## Daftar Command
+
+| Command | Fungsi |
+|---|---|
+| `/startwork` | Mulai work session dan dapatkan akses Focus Room |
+| `/endwork` | Akhiri work session, cabut akses Focus Room, tampilkan durasi |
+| `/status` | Lihat session yang sedang aktif |
+| `/dailyreport` | Ringkasan aktivitas tim hari ini + AI |
+| `/weeklyreport` | Ringkasan aktivitas tim 7 hari terakhir + AI |
+| `/mystats` | Statistik work session kamu sendiri |
+| `/teamstats` | Statistik work session seluruh tim |
+| `/help` | Daftar command dan fungsinya (ephemeral) |
+| `/health` | Cek latensi Discord, Supabase, dan konfigurasi AI (ephemeral) |
+| `/about` | Versi bot, uptime, dan link repository (ephemeral) |
+
 ## Prasyarat
 
 - Node.js versi 18 atau lebih baru ([download di sini](https://nodejs.org)) — bot memakai `fetch` bawaan Node.
@@ -112,7 +127,7 @@ Kalau di console muncul `✅ Bot online sebagai ...` dan `⏰ Auto-endwork aktif
 3. Ketik `/endwork` saat selesai → role Focus Room dicabut, durasi kerja ditampilkan.
 4. Ketik `/status` untuk melihat siapa yang sedang aktif bekerja.
 5. Ketik `/dailyreport`, `/weeklyreport`, `/mystats`, atau `/teamstats` untuk melihat laporan.
-6. Ketik `/help` untuk melihat daftar command.
+6. Ketik `/help` untuk melihat daftar command, `/health` untuk cek status bot, dan `/about` untuk info versi.
 
 ## Auto-endwork
 
@@ -144,6 +159,21 @@ Endpoint tambahan: `GET /health` untuk cek bot/webhook server hidup.
 - GitHub activity **belum terhubung** ke identitas Discord — laporan menampilkannya berdasarkan username GitHub. Command `/linkgithub` belum tersedia.
 - Ringkasan AI dibuat dengan guardrail: hanya meringkas data, tidak membuat ranking atau menilai kinerja seseorang.
 - Tanpa `GITHUB_TOKEN`, GitHub API dibatasi 60 request/jam dan repo privat tidak bisa diakses.
+
+## Troubleshooting
+
+Mulai dari `/health` di Discord — command ini menunjukkan bagian mana yang bermasalah.
+
+| Gejala | Kemungkinan penyebab & solusi |
+|---|---|
+| `/health` menampilkan Supabase ❌ / `fetch failed` | Cek `SUPABASE_URL` dan `SUPABASE_SERVICE_KEY`. Pastikan project Supabase tidak sedang paused dan server bisa mengakses internet. |
+| `/health` menampilkan AI ⚠️ | `GEMINI_API_KEY` kosong atau `AI_PROVIDER` tidak dikenal. Isi key lalu restart bot. |
+| Laporan muncul tanpa bagian AI | Normal jika AI belum dikonfigurasi; laporan objektif tetap ditampilkan. |
+| Grant/revoke Focus Room gagal | Bot butuh permission **Manage Roles**, dan role bot harus di atas role Focus Room. |
+| Command tidak muncul saat mengetik `/` | Jalankan `npm run deploy-commands`, cek `DISCORD_GUILD_ID`, lalu restart Discord. |
+| Webhook GitHub mendapat `401` | `GITHUB_WEBHOOK_SECRET` di `.env` tidak sama dengan secret di GitHub. |
+| `Unknown interaction` / command timeout | Bot restart atau lambat merespons. Cek console dan `/health`. |
+| Session lama masih aktif setelah restart | Cek log `[autoEndwork]`; pastikan job berjalan dan batas durasi belum terlewati. |
 
 ## Struktur Project
 
