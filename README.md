@@ -1,22 +1,41 @@
-# TA Workspace Bot — Phase 1
+# TA Workspace Bot
 
-Discord bot untuk workspace produktivitas tim saat mengerjakan TA.
-Phase 1: core Discord bot + work session management (in-memory, belum pakai database).
+Discord bot untuk workspace produktivitas tim saat mengerjakan TA. Bot ini mengelola **work session** (mulai/selesai kerja), memberi akses **Focus Room**, menyimpan data ke **Supabase**, menerima aktivitas **GitHub** lewat webhook, dan membuat **ringkasan AI** dari data tim.
 
-## Fitur Phase 1
+## Fitur
 
-- `/startwork` — mulai work session, dapat akses role Focus Room
-- `/endwork` — akhiri work session, akses Focus Room dicabut, durasi ditampilkan
-- `/status` — lihat siapa saja yang sedang aktif bekerja
-- `/help` — tampilkan daftar command beserta fungsinya
-- **Auto-endwork** — session yang lupa di-`/endwork` otomatis ditutup setelah melewati batas durasi (default 8 jam), akses Focus Room dicabut, dan user dikabari lewat DM
+### Work Session
+
+- `/startwork` — mulai work session dan dapatkan role Focus Room.
+- `/endwork` — akhiri work session, role Focus Room dicabut, durasi kerja ditampilkan.
+- `/status` — lihat siapa saja yang sedang work session aktif saat ini.
+- **Auto-endwork** — session yang lupa di-`/endwork` otomatis ditutup setelah melewati batas durasi (default 8 jam), role Focus Room dicabut, dan user dikabari lewat DM (fallback ke system channel).
+
+### Laporan & Statistik
+
+- `/dailyreport` — ringkasan aktivitas tim hari ini + ringkasan AI.
+- `/weeklyreport` — ringkasan aktivitas tim 7 hari terakhir + ringkasan AI.
+- `/mystats` — statistik work session kamu sendiri (sepanjang waktu).
+- `/teamstats` — statistik keseluruhan tim (sepanjang waktu).
+
+### Integrasi
+
+- **Supabase** — semua data user, server, work session, commit, dan pull request tersimpan permanen (tidak hilang saat bot restart).
+- **GitHub webhook** — menerima event `push` dan `pull_request`, memverifikasi signature, lalu menyimpan commit/PR beserta statistiknya.
+- **Gemini AI** — merangkum laporan harian/mingguan. Kalau API key tidak diisi, laporan tetap tampil tanpa bagian AI.
+
+### Lainnya
+
+- `/help` — tampilkan daftar command beserta fungsinya.
 
 ## Prasyarat
 
-- Node.js versi 18 atau lebih baru ([download di sini](https://nodejs.org))
-- Sudah membuat Discord Application + Bot di https://discord.com/developers/applications
-- Bot sudah di-invite ke server Discord kamu
-- Sudah ada 1 role bernama misalnya `Focus Room Access` di server (buat manual dulu di Server Settings → Roles)
+- Node.js versi 18 atau lebih baru ([download di sini](https://nodejs.org)) — bot memakai `fetch` bawaan Node.
+- Discord Application + Bot ([Developer Portal](https://discord.com/developers/applications)), dan bot sudah di-invite ke server.
+- Role `Focus Room Access` (atau nama lain) sudah dibuat di Server Settings → Roles.
+- Project Supabase dengan tabel: `users`, `servers`, `work_sessions`, `commits`, `pull_requests`.
+- (Opsional) API key Gemini untuk ringkasan AI.
+- (Opsional) Akses repo GitHub untuk memasang webhook.
 
 ## Setup
 
@@ -36,16 +55,26 @@ cp .env.example .env
 
 Lalu isi nilainya:
 
-| Variable | Cara mendapatkan |
-|---|---|
-| `DISCORD_TOKEN` | Developer Portal → Application kamu → Bot → Reset Token |
-| `DISCORD_CLIENT_ID` | Developer Portal → Application kamu → General Information → Application ID |
-| `DISCORD_GUILD_ID` | Discord app → aktifkan Developer Mode (Settings → Advanced) → klik kanan nama server → Copy Server ID |
-| `FOCUS_ROOM_ROLE_ID` | Discord app → klik kanan role `Focus Room Access` → Copy Role ID |
-| `AUTO_ENDWORK_MAX_HOURS` | Opsional, default `8`. Batas durasi session sebelum ditutup otomatis |
-| `AUTO_ENDWORK_CHECK_INTERVAL_MINUTES` | Opsional, default `10`. Interval pengecekan session kedaluwarsa |
+| Variable | Wajib | Keterangan |
+|---|---|---|
+| `DISCORD_TOKEN` | ✅ | Developer Portal → Application → Bot → Reset Token |
+| `DISCORD_CLIENT_ID` | ✅ | Developer Portal → General Information → Application ID |
+| `DISCORD_GUILD_ID` | ✅ | Klik kanan nama server → Copy Server ID (aktifkan Developer Mode) |
+| `FOCUS_ROOM_ROLE_ID` | ✅ | Klik kanan role Focus Room → Copy Role ID |
+| `SUPABASE_URL` | ✅ | Supabase → Project Settings → API → Project URL |
+| `SUPABASE_SERVICE_KEY` | ✅ | Supabase → Project Settings → API → `service_role` key |
+| `GITHUB_WEBHOOK_SECRET` | ✅ | Secret bebas; harus sama dengan yang diisi di webhook GitHub |
+| `GITHUB_TOKEN` | — | Personal access token; disarankan agar bisa baca repo privat & limit API lebih besar |
+| `WEBHOOK_SERVER_PORT` | — | Default `3000` |
+| `AI_PROVIDER` | — | Default `gemini` |
+| `GEMINI_API_KEY` | — | Kalau kosong, ringkasan AI tidak tersedia |
+| `GEMINI_MODEL` | — | Default `gemini-3.5-flash-lite` |
+| `AUTO_ENDWORK_MAX_HOURS` | — | Default `8`. Batas durasi session sebelum ditutup otomatis |
+| `AUTO_ENDWORK_CHECK_INTERVAL_MINUTES` | — | Default `10`. Interval pengecekan session kedaluwarsa |
 
 **Jangan pernah commit file `.env` ke git** — file ini sudah masuk `.gitignore`.
+
+`AUTO_ENDWORK_MAX_HOURS` menerima angka desimal (misal `0.5` = 30 menit). Nilai dibaca sekali saat bot start, jadi **restart bot setelah mengubah `.env`**.
 
 ### 3. Daftarkan slash command ke server
 
@@ -55,58 +84,121 @@ Jalankan sekali (dan setiap kali ada command baru/berubah):
 npm run deploy-commands
 ```
 
-Kalau berhasil, command `/startwork`, `/endwork`, `/status` akan langsung muncul saat kamu ketik `/` di server Discord.
+Kalau berhasil, semua slash command akan langsung muncul saat kamu ketik `/` di server Discord.
 
 ### 4. Jalankan bot
 
-Mode development (auto-restart saat file berubah):
+Mode development (auto-restart saat file `.ts` berubah):
 
 ```bash
 npm run dev
 ```
 
-Kalau di console muncul `✅ Bot online sebagai ...`, bot sudah siap dipakai.
+Atau build lalu jalankan versi production:
 
-## Cara pakai
+```bash
+npm run build
+npm start
+```
 
-1. Ketik `/startwork` di channel mana saja di server → kamu dapat role Focus Room
-2. Kerja seperti biasa
-3. Ketik `/endwork` saat selesai → role Focus Room dicabut, durasi kerja ditampilkan
-4. Siapa saja bisa ketik `/status` untuk lihat siapa yang sedang aktif bekerja
+Kalau di console muncul `✅ Bot online sebagai ...` dan `⏰ Auto-endwork aktif`, bot sudah siap dipakai.
 
-## Catatan penting Phase 1
+## Cara Pakai
 
-- **Data session hilang saat bot di-restart** — ini expected, karena Phase 1 belum pakai database. Persistence baru masuk di Phase 2 (Supabase).
-- Bot butuh permission **Manage Roles** dan role bot harus **di atas** role Focus Room di urutan Server Settings → Roles, kalau tidak, grant/revoke akses akan gagal.
-- Belum ada GitHub integration, AI, atau deployment ke VPS — semua itu di phase-phase berikutnya.
+1. Ketik `/startwork` di channel mana saja → kamu dapat role Focus Room.
+2. Kerja seperti biasa.
+3. Ketik `/endwork` saat selesai → role Focus Room dicabut, durasi kerja ditampilkan.
+4. Ketik `/status` untuk melihat siapa yang sedang aktif bekerja.
+5. Ketik `/dailyreport`, `/weeklyreport`, `/mystats`, atau `/teamstats` untuk melihat laporan.
+6. Ketik `/help` untuk melihat daftar command.
 
-## Struktur project
+## Auto-endwork
+
+Kalau user lupa `/endwork`, session-nya tidak akan menggantung selamanya:
+
+- Bot mengecek session aktif secara berkala (`AUTO_ENDWORK_CHECK_INTERVAL_MINUTES`).
+- Session yang sudah berjalan lebih lama dari `AUTO_ENDWORK_MAX_HOURS` ditutup dengan status `ended`.
+- Role Focus Room dicabut, lalu user dikirimi DM. Kalau DM gagal (misal DM ditutup), notifikasi dikirim ke system channel server.
+- Pengecekan pertama juga berjalan saat bot start, jadi session lama yang sudah kedaluwarsa langsung ditutup setelah restart.
+- Durasi dihitung dari waktu `started_at`, bukan dari aktivitas terakhir user.
+
+## Setup Webhook GitHub
+
+1. Jalankan bot agar webhook server aktif di `WEBHOOK_SERVER_PORT` (default `3000`).
+2. Buka repo GitHub → Settings → Webhooks → Add webhook.
+3. Isi **Payload URL** dengan `https://<host-kamu>:<port>/webhooks/github`.
+   - Untuk development lokal, gunakan tunnel seperti ngrok/smee.
+4. **Content type**: `application/json`.
+5. **Secret**: samakan dengan `GITHUB_WEBHOOK_SECRET` di `.env`.
+6. Pilih event **Pushes** dan **Pull requests**.
+7. Setelah tersimpan, GitHub mengirim event `ping` — cek console bot untuk memastikan webhook terpasang.
+
+Endpoint tambahan: `GET /health` untuk cek bot/webhook server hidup.
+
+## Catatan Penting
+
+- Bot butuh permission **Manage Roles**, dan role bot harus **di atas** role Focus Room di Server Settings → Roles. Kalau tidak, grant/revoke akses akan gagal.
+- Data work session tersimpan di Supabase, jadi tidak hilang saat bot restart.
+- GitHub activity **belum terhubung** ke identitas Discord — laporan menampilkannya berdasarkan username GitHub. Command `/linkgithub` belum tersedia.
+- Ringkasan AI dibuat dengan guardrail: hanya meringkas data, tidak membuat ranking atau menilai kinerja seseorang.
+- Tanpa `GITHUB_TOKEN`, GitHub API dibatasi 60 request/jam dan repo privat tidak bisa diakses.
+
+## Struktur Project
 
 ```
 src/
-├── index.ts                    # entry point, setup client & load command
+├── index.ts                    # entry point, setup client, load command, start job
 ├── deploy-commands.ts          # script daftarkan slash command (jalankan manual)
+├── server.ts                   # webhook server Express (GitHub + /health)
 ├── commands/                   # 1 file = 1 slash command
 │   ├── startwork.ts
 │   ├── endwork.ts
 │   ├── status.ts
+│   ├── dailyreport.ts
+│   ├── weeklyreport.ts
+│   ├── mystats.ts
+│   ├── teamstats.ts
 │   └── help.ts
 ├── events/                     # Discord event handlers
 │   ├── ready.ts
 │   └── interactionCreate.ts
-├── services/                   # business logic, tidak tahu soal Discord API detail
+├── jobs/
+│   └── autoEndworkJob.ts       # penutupan session kedaluwarsa berkala
+├── services/                   # business logic, tidak tahu detail Discord API
 │   ├── workSessionService.ts
-│   └── permissionService.ts
-├── repositories/                # akses data (Phase 1: in-memory, Phase 2: Supabase)
-│   └── workSessionRepository.ts
+│   ├── permissionService.ts
+│   ├── reportService.ts
+│   ├── githubService.ts
+│   ├── aiService.ts
+│   └── ai/
+│       ├── AIProvider.ts
+│       └── GeminiProvider.ts
+├── repositories/               # akses data ke Supabase
+│   ├── userRepository.ts
+│   ├── serverRepository.ts
+│   ├── workSessionRepository.ts
+│   ├── reportRepository.ts
+│   └── githubRepository.ts
 ├── config/
-│   └── env.ts                  # baca & validasi environment variables
+│   ├── env.ts                  # baca & validasi environment variables
+│   └── supabaseClient.ts
 ├── types/
 │   ├── session.ts
+│   ├── report.ts
+│   ├── github.ts
 │   └── command.ts
 └── utils/
-    └── duration.ts
+    ├── duration.ts
+    └── formatReport.ts
 ```
 
+## Scripts
 
-Alur data: **Command → Service → Repository**. Command tidak pernah bicara langsung ke repository, dan service tidak pernah tahu detail Discord.js — supaya nanti gampang di-test dan gampang migrasi ke Phase 2 (Supabase).
+| Command | Fungsi |
+|---|---|
+| `npm run dev` | Jalankan bot mode development (auto-restart) |
+| `npm run build` | Compile TypeScript ke `dist/` |
+| `npm start` | Jalankan hasil build |
+| `npm run deploy-commands` | Daftarkan slash command ke guild |
+
+Alur data: **Command → Service → Repository**. Command tidak pernah bicara langsung ke repository, dan service tidak bergantung pada detail Discord.js — supaya mudah di-test dan dikembangkan.
