@@ -11,12 +11,13 @@ interface WorkSessionRow {
   ended_at: string | null;
   duration_ms: number | null;
   status: WorkSessionStatus;
+  users?: { discord_user_id: string } | null;
 }
 
 function mapRow(row: WorkSessionRow): WorkSession {
   return {
     id: row.id,
-    userId: row.user_id,
+    userId: row.users?.discord_user_id ?? row.user_id,
     guildId: row.server_id,
     startedAt: new Date(row.started_at),
     endedAt: row.ended_at ? new Date(row.ended_at) : null,
@@ -32,7 +33,7 @@ class WorkSessionRepository {
 
     const { data, error } = await supabase
       .from("work_sessions")
-      .select("*")
+      .select("*, users(discord_user_id)")
       .eq("user_id", user.id)
       .eq("server_id", server.id)
       .eq("status", "active")
@@ -47,7 +48,7 @@ class WorkSessionRepository {
 
     const { data, error } = await supabase
       .from("work_sessions")
-      .select("*")
+      .select("*, users(discord_user_id)")
       .eq("server_id", server.id)
       .eq("status", "active");
 
@@ -62,7 +63,7 @@ class WorkSessionRepository {
     const { data, error } = await supabase
       .from("work_sessions")
       .insert({ user_id: user.id, server_id: server.id, status: "active" })
-      .select("*")
+      .select("*, users(discord_user_id)")
       .single();
 
     if (error || !data) throw new Error(`Gagal membuat session baru: ${error?.message}`);
@@ -72,7 +73,7 @@ class WorkSessionRepository {
   async close(sessionId: string): Promise<WorkSession> {
     const { data: existing, error: fetchError } = await supabase
       .from("work_sessions")
-      .select("*")
+      .select("*, users(discord_user_id)")
       .eq("id", sessionId)
       .single();
 
